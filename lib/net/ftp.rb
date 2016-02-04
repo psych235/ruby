@@ -398,10 +398,34 @@ module Net
     end
     private :makeport
 
+    # determines if IP is a routable address (public)
+    def routable_address?(address)
+      if address[0..3] == "127" || address[0..3] == "10." || address[0..7] == "192.168" || address[0..7] == "169.254"
+    	return false
+      end
+
+      if address[0..3] == "172"
+    	class_b = address[/\.([0-9]*?)\./, 1]
+
+    	if class_b >= 16 && class_b <= 31
+    	  return false
+        end
+      end
+
+      return true
+    end
+    private :routable_address?
+
     # sends the appropriate command to enable a passive connection
     def makepasv # :nodoc:
       if @sock.peeraddr[0] == "AF_INET"
+        tmpHost = @sock.peeraddr[2]
+
         host, port = parse227(sendcmd("PASV"))
+
+        unless routable_address?(host)
+            host = tmpHost
+        end
       else
         host, port = parse229(sendcmd("EPSV"))
         #     host, port = parse228(sendcmd("LPSV"))
